@@ -1,12 +1,11 @@
 const { useState, useEffect, useRef } = React;
 
 const App = () => {
-    const [messages, setMessages] = useState([{ role: 'ai', text: 'Flix-OS v1.0.2 Initialized. System standby.' }]);
+    const [messages, setMessages] = useState([{ role: 'ai', text: 'Flix-OS v1.0.2 Initialized. .System standby' }]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const endRef = useRef(null);
 
-    // لازم الـ ID ده يكون مطابق تماماً للي كتبناه في الـ SQL فوق
     const AGENT_ID = "550e8400-e29b-41d4-a716-446655440000"; 
 
     const handleSend = async () => {
@@ -20,22 +19,17 @@ const App = () => {
             const res = await fetch('/api/webhook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    agent_id: AGENT_ID, 
-                    session_id: "hany_session", 
-                    message: msg 
-                })
+                body: JSON.stringify({ agent_id: AGENT_ID, session_id: "main_user", message: msg })
             });
             const data = await res.json();
             
             if (data.error) {
-                // لو السيرفر رجع Error (زي Agent not found) هيعرضه هنا
-                setMessages(prev => [...prev, { role: 'ai', text: `⚠️ System Log: ${data.error}` }]);
+                setMessages(prev => [...prev, { role: 'ai', text: `System Log: ⚠️ ${data.error}` }]);
             } else {
                 setMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
             }
         } catch (e) {
-            setMessages(prev => [...prev, { role: 'ai', text: "❌ Connection Error" }]);
+            setMessages(prev => [...prev, { role: 'ai', text: "❌ Fatal Connection Error" }]);
         } finally {
             setLoading(false);
             endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,20 +38,30 @@ const App = () => {
 
     return (
         <div className="flex flex-col h-screen bg-black text-green-400 font-mono">
-            <header className="p-4 border-b border-green-900 bg-gray-950 font-bold text-center">FLIX-OS CORE</header>
+            <header className="p-4 border-b border-green-900 bg-gray-950 text-center font-bold tracking-tighter text-green-500">
+                FLIX-OS CORE INTERFACE
+            </header>
+            
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-2 rounded border ${m.role === 'user' ? 'bg-green-950 border-green-500' : 'bg-gray-900 border-gray-700'} max-w-[80%]`}>
-                            {m.text}
+                        <div className={`p-3 rounded border ${m.role === 'user' ? 'bg-green-950 border-green-500' : 'bg-gray-900 border-gray-700'} max-w-[85%]`}>
+                            <p className="whitespace-pre-wrap">{m.text}</p>
                         </div>
                     </div>
                 ))}
                 <div ref={endRef} />
             </div>
-            <div className="p-4 bg-gray-950 flex gap-2">
-                <input className="flex-1 bg-black border border-green-800 p-2 outline-none" value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} placeholder="Command..." />
-                <button onClick={handleSend} className="bg-green-800 px-4 py-2 text-white">EXECUTE</button>
+
+            <div className="p-4 bg-gray-950 border-t border-green-900 flex gap-2">
+                <input 
+                    className="flex-1 bg-black border border-green-800 p-2 outline-none focus:border-green-400"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && handleSend()}
+                    placeholder=". . . Command"
+                />
+                <button onClick={handleSend} className="bg-green-800 hover:bg-green-700 px-6 text-white font-bold">EXECUTE</button>
             </div>
         </div>
     );
