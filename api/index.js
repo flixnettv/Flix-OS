@@ -1,38 +1,31 @@
-import { supabase, saveAgentMemory } from '../utils/supabase.js';
-import axios from 'axios';
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const axios = require('axios');
+const { supabase } = require('./utils/supabase');
 
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+const FlixEngine = {
+    async getResponse(provider, prompt, systemInstruction) {
+        const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+        if (provider === 'groq') {
+            const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+                model: "llama3-8b-8192",
+                messages: [{ role: "user", content: fullPrompt }]
+            }, { headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` } });
+            return res.data.choices[0].message.content;
+        }
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(fullPrompt);
+        return result.response.text();
+    },
 
-    const { prompt, agentId, sessionId } = req.body;
-
-    try {
-        // 1. طلب الرد من Gemini 1.5 Flash
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-            {
-                contents: [{ parts: [{ text: prompt }] }]
-            }
-        );
-
-        const aiText = response.data.candidates[0].content.parts[0].text;
-
-        // 2. تفعيل ACE3 Memory: حفظ المحادثة في Supabase
-        // سيتم تخزين السؤال والجواب ليعرف الوكيل من أنت في المرة القادمة
-        await saveAgentMemory(agentId, sessionId, { 
-            user_query: prompt, 
-            ai_response: aiText,
-            timestamp: new Date().toISOString()
-        }, 'short_term');
-
-        // 3. إرسال الرد للواجهة
-        res.status(200).json({ 
-            status: 'success', 
-            response: aiText 
-        });
-
-    } catch (error) {
-        console.error("Orchestrator Error:", error.response?.data || error.message);
-        res.status(500).json({ error: "خطأ في الاتصال بالمحرّك أو مفتاح الـ API" });
+    async saveLog(agentId, event, message, sessionId) {
+        await supabase.from('agent_logs').insert([{
+            agent_id: agentId,
+            event: event,
+            message: message,
+            session_id: sessionId
+        }]);
     }
-}
+};
+
+module.exports = { FlixEngine };
