@@ -1,46 +1,38 @@
-import { supabase, saveAgentMemory, logSystemAction } from '../utils/supabase.js';
-import { readGithubFile } from './mcp.js';
+import { supabase, saveAgentMemory } from '../utils/supabase.js';
+import axios from 'axios';
 
 export default async function handler(req, res) {
-    // تفعيل CORS للتواصل مع الواجهة الأمامية
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-    const { prompt, agentId, sessionId, useMcp } = req.body;
+    const { prompt, agentId, sessionId } = req.body;
 
     try {
-        await logSystemAction('INFO', 'Received new prompt', { agentId, sessionId });
-
-        // 1. استدعاء أداة MCP إذا طلب المستخدم ذلك
-        let mcpContext = "";
-        if (useMcp && useMcp.action === 'read_github') {
-            const githubData = await readGithubFile(useMcp.owner, useMcp.repo, useMcp.path);
-            if (githubData.success) {
-                mcpContext = `\n[System: GitHub File Content Added]\n${githubData.content}\n`;
+        // 1. طلب الرد من Gemini 1.5 Flash
+        const response = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            {
+                contents: [{ parts: [{ text: prompt }] }]
             }
-        }
+        );
 
-        // 2. إرسال الطلب إلى Gemini (أو أي موديل آخر عبر المحرك)
-        // محاكاة لطلب الـ API الخاص بـ Gemini 1.5 Flash
-        const finalPrompt = `${mcpContext}\nUser Prompt: ${prompt}`;
-        
-        // هنا يتم وضع الكود الفعلي للاتصال بـ API Gemini أو Groq
-        const aiResponse = `[Mock Response] تم معالجة طلبك عبر المحرك. لقد استلمت النص: "${prompt}".`; 
+        const aiText = response.data.candidates[0].content.parts[0].text;
 
-        // 3. حفظ الذاكرة في Supabase (نظام ACE3)
-        await saveAgentMemory(agentId, sessionId, { prompt, response: aiResponse }, 'short_term');
+        // 2. تفعيل ACE3 Memory: حفظ المحادثة في Supabase
+        // سيتم تخزين السؤال والجواب ليعرف الوكيل من أنت في المرة القادمة
+        await saveAgentMemory(agentId, sessionId, { 
+            user_query: prompt, 
+            ai_response: aiText,
+            timestamp: new Date().toISOString()
+        }, 'short_term');
 
+        // 3. إرسال الرد للواجهة
         res.status(200).json({ 
             status: 'success', 
-            response: aiResponse,
-            agent_id: agentId 
+            response: aiText 
         });
 
     } catch (error) {
-        await logSystemAction('ERROR', 'Orchestrator Error', { error: error.message });
-        res.status(500).json({ error: error.message });
+        console.error("Orchestrator Error:", error.response?.data || error.message);
+        res.status(500).json({ error: "خطأ في الاتصال بالمحرّك أو مفتاح الـ API" });
     }
 }
