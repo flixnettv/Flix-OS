@@ -1,36 +1,97 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from 'groq-sdk';
+import OpenRouter from 'openrouter-ai';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+export const config = {
+  runtime: 'edge',
+};
 
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+export default async function handler(req) {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
 
-    const { agent_id, message } = req.body;
+  try {
+    const { agent_id, message } = await req.json();
+    
+    // Initialize clients
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const openrouter = new OpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY
+    });
 
-    try {
-        // جلب بيانات الوكيل من قاعدة البيانات
-        const { data: agent, error: agentErr } = await supabase
-            .from('agents')
-            .select('*')
-            .eq('id', agent_id)
-            .single();
+    // Fetch agent configuration
+    const {  agent, error } = await supabase
+      .from('agents')
+      .select('name, model, role_prompt')
+      .eq('id', agent_id)
+      .single();
 
-        if (agentErr || !agent) throw new Error("Agent Not Found");
-
-        // تنظيف اسم الموديل لتجنب خطأ الـ 404
-        const modelName = agent.model.includes('/') ? agent.model.split('/').pop() : agent.model;
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        // إرسال الطلب لـ Gemini
-        const prompt = `${agent.role_prompt}\n\nUser: ${message}`;
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        
-        return res.status(200).json({ reply: response.text() });
-
-    } catch (error) {
-        return res.status(500).json({ error: "API Error", details: error.message });
+    if (error || !agent) {
+      return new Response(JSON.stringify({ error: 'Agent not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
+
+    // Build system prompt
+    const systemPrompt = `${agent.role_prompt}\n\nCurrent context: ${message}`;
+    
+    // Determine provider based on model
+    let response;
+    
+    if (agent.model.includes('gemini')) {
+      const modelName = agent.model.replace('models/', '');
+      const model = gemini.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(systemPrompt);
+      response = await result.response.text();
+      
+    } else if (agent.model.includes('groq')) {
+      const completion = await groq.chat.completions.create({
+        model: agent.model.replace('groq/', ''),
+        messages: [{ role: 'user', content: systemPrompt }],
+      });
+      response = completion.choices[0].message.content;
+      
+    } else if (agent.model.includes('openrouter')) {
+      const completion = await openrouter.chat.completions.create({
+        model: agent.model.replace('openrouter/', ''),
+        messages: [{ role: 'user', content: systemPrompt }],
+      });
+      response = completion.choices[0].message.content;
+      
+    } else {
+      // Fallback to Gemini
+      const model = gemini.getGenerativeModel({ model: 'gemini-pro' });
+      const result = await model.generateContent(systemPrompt);
+      response = await result.response.text();
+    }
+
+    // Log the interaction
+    await supabase.from('agent_logs').insert({
+      agent_id,
+      input: message,
+      output: response,
+      timestamp: new Date().toISOString()
+    }).throwOnError();
+
+    return new Response(JSON.stringify({ response }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
