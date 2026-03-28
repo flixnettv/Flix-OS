@@ -1,25 +1,12 @@
 {
-  "name": "flix-os",
-  "version": "1.0.2",
-  "description": "Flix-OS Core System - AI Agent Management",
-  "main": "api/webhook.js",
+  "name": "flix-os-v3",
+  "version": "1.0.3",
+  "private": true,
   "engines": {
     "node": "20.x"
-  },
-  "scripts": {
-    "start": "node api/webhook.js",
-    "dev": "vercel dev"
   },
   "dependencies": {
     "@google/generative-ai": "0.21.0",
     "@supabase/supabase-js": "^2.39.0"
-  },
-  "keywords": [
-    "ai",
-    "gemini",
-    "supabase",
-    "os"
-  ],
-  "author": "Hany Youssef",
-  "license": "MIT"
+  }
 }
