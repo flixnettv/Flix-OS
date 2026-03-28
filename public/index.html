@@ -1,49 +1,120 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLIX-OS v1.0.3</title>
+    <title>FLIX-OS CORE v1.0.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;500&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #050505; color: #00ff41; font-family: monospace; }
-        .terminal-border { border: 1px solid #004411; }
+        body { 
+            background-color: #050505; 
+            color: #00ff41; 
+            font-family: 'Fira Code', monospace; 
+            overflow: hidden;
+        }
+        .terminal-glow { text-shadow: 0 0 10px #00ff41; }
+        .scanline {
+            width: 100%; height: 2px;
+            background: rgba(0, 255, 65, 0.1);
+            position: absolute; top: 0;
+            animation: scan 4s linear infinite;
+        }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #004411; }
     </style>
 </head>
-<body class="p-4 flex flex-col h-screen">
-    <div class="terminal-border bg-black p-2 mb-4 text-xs">
-        [ SYSTEM ONLINE ] - FLIX-CORE v1.0.3
-    </div>
-    
-    <div id="chat-box" class="flex-1 overflow-y-auto mb-4 space-y-2 text-sm p-2 border border-[#002200]">
-        </div>
+<body class="h-screen flex flex-col p-4 relative">
+    <div class="scanline"></div>
 
-    <div class="flex gap-2">
-        <input id="user-input" type="text" class="flex-1 bg-black border border-[#004411] p-3 outline-none focus:border-[#00ff41]" placeholder="Enter command...">
-        <button onclick="send()" class="bg-[#004411] px-6 py-2 hover:bg-[#008822]">EXEC</button>
+    <header class="border border-[#004411] p-3 mb-4 bg-[#0a0a0a] flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <h1 class="terminal-glow font-bold tracking-tighter">FLIX-OS // CORE_INTERFACE</h1>
+        </div>
+        <div class="text-[10px] opacity-50 text-left">
+            NODE_20_STABLE <br> STATUS: ACTIVE
+        </div>
+    </header>
+
+    <div id="chat-box" class="flex-1 overflow-y-auto border border-[#002200] bg-black p-4 space-y-4 mb-4">
+        <div class="text-xs opacity-60">-- System Initialized v1.0.3 --</div>
+        <div class="text-[#00ff41] animate-pulse">>> Waiting for command...</div>
+    </div>
+
+    <div class="flex gap-2 bg-[#0a0a0a] p-2 border border-[#004411]">
+        <input 
+            id="user-input" 
+            type="text" 
+            autofocus
+            class="flex-1 bg-transparent border-none outline-none text-[#00ff41] p-2"
+            placeholder="TYPE COMMAND AND PRESS EXEC..."
+            onkeypress="if(event.key === 'Enter') send()"
+        >
+        <button 
+            onclick="send()" 
+            class="bg-[#004411] hover:bg-[#008822] text-black font-bold px-8 py-2 transition-all active:scale-95"
+        >
+            EXEC
+        </button>
     </div>
 
     <script>
+        // ضع الـ ID الخاص بك هنا، أو اتركه فارغاً وسيحاول النظام جلب أول وكيل متاح
+        const DEFAULT_AGENT_ID = "00000000-0000-0000-0000-000000000000"; 
+
         async function send() {
             const input = document.getElementById('user-input');
             const box = document.getElementById('chat-box');
-            if(!input.value) return;
+            const msg = input.value.trim();
 
-            box.innerHTML += `<div class="text-white">> ${input.value}</div>`;
-            const msg = input.value;
+            if (!msg) return;
+
+            // عرض رسالة المستخدم
+            box.innerHTML += `
+                <div class="flex justify-start">
+                    <div class="bg-[#001100] border border-[#004411] p-2 max-w-[90%]">
+                        <span class="text-white opacity-50 font-bold">USR></span> ${msg}
+                    </div>
+                </div>`;
+            
             input.value = '';
+            box.scrollTop = box.scrollHeight;
+
+            // إشارة المعالجة
+            const loadingId = "load-" + Date.now();
+            box.innerHTML += `<div id="${loadingId}" class="text-xs italic animate-pulse">SYS: Processing request...</div>`;
 
             try {
-                const res = await fetch('/api/webhook', {
+                const response = await fetch('/api/webhook', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ agent_id: 'ID_HERE', message: msg }) // استبدل ID_HERE بمعرف وكيلك
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        agent_id: DEFAULT_AGENT_ID, 
+                        message: msg 
+                    })
                 });
-                const data = await res.json();
-                box.innerHTML += `<div class="text-[#00ff41]">[AI]: ${data.reply || data.details}</div>`;
-            } catch (e) {
-                box.innerHTML += `<div class="text-red-500">[ERR]: Connection Failed</div>`;
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                if (data.reply) {
+                    box.innerHTML += `
+                        <div class="flex justify-end">
+                            <div class="bg-[#050505] border border-[#00ff41] p-3 max-w-[90%] shadow-[0_0_10px_rgba(0,255,65,0.1)]">
+                                <span class="block text-[10px] opacity-40 mb-1">AGENT_RESPONSE_STREAM</span>
+                                <p class="text-sm leading-relaxed">${data.reply}</p>
+                            </div>
+                        </div>`;
+                } else {
+                    throw new Error(data.details || "Unknown System Error");
+                }
+            } catch (error) {
+                document.getElementById(loadingId).className = "text-red-500 text-xs";
+                document.getElementById(loadingId).innerText = `[CRITICAL_ERR]: ${error.message}`;
             }
+            
             box.scrollTop = box.scrollHeight;
         }
     </script>
