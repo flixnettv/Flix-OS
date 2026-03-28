@@ -1,19 +1,6 @@
 {
-  "name": "flix-os-core",
-  "version": "1.0.2",
-  "description": "AI-OS Orchestrator for Hany Youssef",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "@supabase/supabase-js": "^2.48.0",
-    "axios": "^1.7.9",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2"
-  },
-  "engines": {
-    "node": "20.x"
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
