@@ -6,6 +6,7 @@ const App = () => {
     const [loading, setLoading] = useState(false);
     const endRef = useRef(null);
 
+    // الـ ID الثابت للوكيل في نظامك
     const AGENT_ID = "550e8400-e29b-41d4-a716-446655440000"; 
 
     useEffect(() => {
@@ -23,17 +24,17 @@ const App = () => {
             const res = await fetch('/api/webhook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agent_id: AGENT_ID, session_id: "hany_dev", message: msg })
+                body: JSON.stringify({ agent_id: AGENT_ID, session_id: "hany_admin", message: msg })
             });
             const data = await res.json();
             
             if (data.error) {
-                setMessages(prev => [...prev, { role: 'ai', text: `⚠️ ${data.error}` }]);
+                setMessages(prev => [...prev, { role: 'ai', text: `System Log: ⚠️ ${data.error}` }]);
             } else {
                 setMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
             }
         } catch (e) {
-            setMessages(prev => [...prev, { role: 'ai', text: "❌ Connection Lost" }]);
+            setMessages(prev => [...prev, { role: 'ai', text: "❌ Connection Error" }]);
         } finally {
             setLoading(false);
         }
@@ -41,19 +42,19 @@ const App = () => {
 
     return (
         <div className="flex flex-col h-screen bg-black text-green-400 font-mono">
-            <header className="p-4 border-b border-green-900 bg-gray-950 text-center text-xl font-bold tracking-widest">
-                FLIX-OS // CORE
+            <header className="p-4 border-b border-green-900 bg-gray-950 text-center font-bold text-lg">
+                FLIX-OS CORE INTERFACE
             </header>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`p-3 rounded border ${m.role === 'user' ? 'bg-green-950 border-green-500' : 'bg-gray-900 border-gray-700'} max-w-[85%]`}>
-                            <pre className="whitespace-pre-wrap font-mono">{m.text}</pre>
+                            <pre className="whitespace-pre-wrap font-mono text-sm">{m.text}</pre>
                         </div>
                     </div>
                 ))}
-                {loading && <div className="text-xs animate-pulse">Processing command...</div>}
+                {loading && <div className="text-xs animate-pulse text-green-600">Executing sequence...</div>}
                 <div ref={endRef} />
             </div>
 
@@ -63,9 +64,9 @@ const App = () => {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyPress={e => e.key === 'Enter' && handleSend()}
-                    placeholder="Enter command..."
+                    placeholder="Enter command . . ."
                 />
-                <button onClick={handleSend} className="bg-green-800 hover:bg-green-700 px-6 text-white font-bold transition-colors">EXECUTE</button>
+                <button onClick={handleSend} className="bg-green-800 hover:bg-green-700 px-6 text-white font-bold">EXECUTE</button>
             </div>
         </div>
     );
