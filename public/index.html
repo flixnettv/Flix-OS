@@ -1,84 +1,15 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flix-OS | Core Terminal</title>
-    
+    <title>FLIX-OS Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        emerald: {
-                            950: '#022c22',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        /* تحسينات إضافية لتجربة المستخدم على الأندرويد */
-        * {
-            -webkit-tap-highlight-color: transparent;
-            box-sizing: border-box;
-        }
-        body {
-            background-color: #020617; /* Slate-950 */
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'ui-monospace', SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        }
-        #root {
-            height: 100%;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        /* إخفاء شريط التمرير الافتراضي */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-    </style>
 </head>
-<body>
-
-    <div id="root">
-        <div class="flex flex-col items-center justify-center text-emerald-500 animate-pulse">
-            <div class="mb-4 text-xl font-bold">FLIX-OS IS LOADING...</div>
-            <div class="w-48 h-1 bg-emerald-900 rounded-full overflow-hidden">
-                <div class="w-1/2 h-full bg-emerald-400"></div>
-            </div>
-        </div>
-    </div>
-
-    <script type="text/babel">
-        // تهيئة عميل Supabase عالمياً قبل تحميل التطبيق
-        // استبدل الروابط بالقيم الخاصة بمشروعك من لوحة تحكم Supabase
-        const SUPABASE_URL = "https://aaczpbmhnhqocvhvctzl.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhY3pwYm1obmhxb2N2aHZjdHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1ODY2MzAsImV4cCI6MjA5MDE2MjYzMH0.aoA39RpVBVsv0QD3gkumjQuIZxPYm8Hj3-39YoME54I";
-        
-        window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        console.log("Flix-OS: Supabase Client Initialized.");
-    </script>
-
-    <script type="text/babel" src="./App.js"></script>
-
+<body class="bg-black text-green-500 font-mono">
+    <div id="root"></div>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" src="App.js"></script>
 </body>
 </html>
