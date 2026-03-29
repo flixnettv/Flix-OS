@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import OpenRouter from 'openrouter-ai';
+import { HfInference } from '@huggingface/inference'; // ← الحزمة الجديدة
 
 export const config = {
   runtime: 'edge',
@@ -17,7 +18,7 @@ export default async function handler(req) {
     const { agent_id, message } = body;
 
     if (!agent_id || !message) {
-      return new Response(JSON({ error: 'Missing agent_id or message' }), {
+      return new Response(JSON.stringify({ error: 'Missing agent_id or message' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -41,11 +42,11 @@ export default async function handler(req) {
       });
     }
 
-    const prompt = `${agent.role_prompt}\n\nUser: ${message}\nAssistant:`;
-
+    const prompt = `${agent.role_prompt}\n\nUser: ${message}\nAssistant:`; // ← prompt format
     let response;
-    const model = agent.model.replace(/^models\/|groq\/|openrouter\/|huggingface\//, '');
 
+    const hf = new HfInference(process.env.HUGGINGFACE_API_KEY); // ← new instance
+    const model = agent.model.replace(/^models\/|groq\/|openrouter\/|huggingface\//, '');
     if (agent.model.includes('gemini')) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const modelInst = genAI.getGenerativeModel({ model });
@@ -66,7 +67,20 @@ export default async function handler(req) {
         messages: [{ role: 'user', content: prompt }],
       });
       response = completion.choices[0].message.content;
+    } else if (agent.model.includes('huggingface')) {
+      // ← استخدام Hugging Face Text Generation
+      const result = await hf.textGeneration({
+        model,
+        inputs: prompt,
+        parameters: {
+          max_new_tokens: 200,
+          temperature: 0.7,
+          return_full_text: false
+        },
+      });
+      response = result.generated_text;
     } else {
+      // fallback
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const modelInst = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await modelInst.generateContent(prompt);
@@ -82,8 +96,7 @@ export default async function handler(req) {
 
     return new Response(JSON.stringify({ response }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      headers: { 'Content-Type': 'application/json' }    });
 
   } catch (err) {
     console.error('[Webhook Error]', err);
