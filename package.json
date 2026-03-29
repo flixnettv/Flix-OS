@@ -11,7 +11,7 @@
     "@supabase/supabase-js": "^2.45.1",
     "@google/generative-ai": "^0.22.0",
     "groq-sdk": "^0.9.1",
-    "openrouter-ai": "^2.2.0",
+    "openrouter-js": "^2.1.0",
     "@huggingface/inference": "^2.8.1",
     "next": "^15.1.2",
     "react": "^19.0.0",
